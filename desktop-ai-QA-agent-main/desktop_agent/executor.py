@@ -11,6 +11,7 @@ from typing import Any, Protocol
 import pyautogui
 
 from config import DEFAULT_WAIT_SECONDS
+from ocr import find_text_location
 
 
 class ActionExecutionError(RuntimeError):
@@ -32,29 +33,29 @@ class TargetLocator(Protocol):
         """Return the center point for a visible target, if found."""
 
 
-class WindowsUiAutomationLocator:
-    """Locate visible controls by name with Windows UI Automation."""
+class HybridTargetLocator:
+    """Locate targets using OCR screenshot pixel matching first, falling back to UI Automation."""
 
     def find_target(self, target: str, screenshot_path: Path | None = None) -> Point | None:
-        try:
-            from pywinauto import Desktop
-        except ImportError:
-            return None
-
-        normalized_target = target.strip().lower()
+        normalized_target = target.strip()
         if not normalized_target or _is_icon_target(normalized_target):
             return None
 
-        try:
-            desktop = Desktop(backend="uia")
-            candidates = desktop.descendants(title=target)
-            if not candidates:
-                candidates = [
-                    element
-                    for element in desktop.descendants()
-                    if normalized_target in str(element.window_text()).strip().lower()
-                ]
+        # 1. Primary: OCR exact text location on the actual screenshot image
+        if screenshot_path and screenshot_path.exists():
+            ocr_pos = find_text_location(screenshot_path, normalized_target)
+            if ocr_pos:
+                return Point(x=ocr_pos[0], y=ocr_pos[1])
 
+        # 2. Secondary: Windows UI Automation fallback
+        try:
+            from pywinauto import Desktop
+            desktop = Desktop(backend="uia")
+            candidates = [
+                element
+                for element in desktop.descendants()
+                if normalized_target.lower() in str(element.window_text()).strip().lower()
+            ]
             for element in candidates:
                 rectangle = element.rectangle()
                 if rectangle.width() <= 0 or rectangle.height() <= 0:
@@ -64,7 +65,7 @@ class WindowsUiAutomationLocator:
                     y=int((rectangle.top + rectangle.bottom) / 2),
                 )
         except Exception:
-            return None
+            pass
 
         return None
 
@@ -79,7 +80,7 @@ class DesktopExecutor:
     """Execute planner actions on the Windows desktop."""
 
     def __init__(self, locator: TargetLocator | None = None, pause: float = 0.2) -> None:
-        self._locator = locator or WindowsUiAutomationLocator()
+        self._locator = locator or HybridTargetLocator()
         pyautogui.PAUSE = pause
         pyautogui.FAILSAFE = True
 
@@ -144,17 +145,17 @@ class DesktopExecutor:
         raise ActionExecutionError(f"Unsupported action: {kind}")
 
     def _resolve_point(self, action: dict[str, Any], screenshot_path: Path | None) -> Point:
-        """Resolve target using text locator first (for text labels), falling back to visual coordinates."""
+        """Resolve target using OCR screenshot matching first, falling back to VLM coordinates."""
 
         target = str(action.get("target", "")).strip()
 
-        # 1. If text target (not an icon label), try locator first
+        # 1. If text target (not an icon label), try OCR / Hybrid locator first
         if target and not _is_icon_target(target):
             point = self._locator.find_target(target, screenshot_path)
             if point:
                 return point
 
-        # 2. Fall back to VLM visual coordinates (x, y)
+        # 2. Fall back to VLM visual coordinates (x, y) from the model
         if "x" in action and "y" in action:
             return Point(int(action["x"]), int(action["y"]))
 
