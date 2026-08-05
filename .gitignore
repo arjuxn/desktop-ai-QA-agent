@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+*.env
+
+# Desktop agent runtime artifacts
+desktop_agent/.env
+desktop_agent/.venv/
+desktop_agent/logs/
+desktop_agent/screenshots/
+desktop_agent/runs/
+desktop_agent/click_markers/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

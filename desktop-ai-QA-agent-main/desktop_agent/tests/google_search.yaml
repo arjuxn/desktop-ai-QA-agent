@@ -1,0 +1,10 @@
+id: GOOGLE_SEARCH_001
+name: Google Search Smoke Test
+start_url: https://www.google.com
+goal: Search Google for OpenRouter and verify that relevant results appear.
+steps:
+  - Open https://www.google.com
+  - Search for OpenRouter
+  - Wait until the results page loads
+expected_results:
+  - OpenRouter
