@@ -33,12 +33,7 @@ class TargetLocator(Protocol):
 
 
 class WindowsUiAutomationLocator:
-    """Locate visible controls by name with Windows UI Automation.
-
-    If UI Automation cannot inspect the active app, this safely returns None.
-    OpenCV template matching or OCR can be added here later without changing
-    planner.py.
-    """
+    """Locate visible controls by name with Windows UI Automation."""
 
     def find_target(self, target: str, screenshot_path: Path | None = None) -> Point | None:
         try:
@@ -47,7 +42,7 @@ class WindowsUiAutomationLocator:
             return None
 
         normalized_target = target.strip().lower()
-        if not normalized_target:
+        if not normalized_target or _is_icon_target(normalized_target):
             return None
 
         try:
@@ -74,6 +69,12 @@ class WindowsUiAutomationLocator:
         return None
 
 
+def _is_icon_target(target: str) -> bool:
+    """Check if the target label describes a visual icon rather than literal text."""
+    lowered = target.lower()
+    return any(keyword in lowered for keyword in ["icon", "avatar", "glyph", "profile icon", "search icon"])
+
+
 class DesktopExecutor:
     """Execute planner actions on the Windows desktop."""
 
@@ -89,63 +90,82 @@ class DesktopExecutor:
 
         if kind == "done":
             return "Completed goal"
-        if kind == "click":
+
+        if kind in ("click", "double_click", "right_click"):
             point = self._resolve_point(action, screenshot_path)
-            pyautogui.click(point.x, point.y)
-            return self._describe_pointer_action("Clicked", action, point)
-        if kind == "double_click":
-            point = self._resolve_point(action, screenshot_path)
-            pyautogui.doubleClick(point.x, point.y)
-            return self._describe_pointer_action("Double-clicked", action, point)
-        if kind == "right_click":
-            point = self._resolve_point(action, screenshot_path)
-            pyautogui.rightClick(point.x, point.y)
-            return self._describe_pointer_action("Right-clicked", action, point)
+            if kind == "click":
+                pyautogui.click(point.x, point.y)
+                past_tense = "Clicked"
+            elif kind == "double_click":
+                pyautogui.doubleClick(point.x, point.y)
+                past_tense = "Double-clicked"
+            else:
+                pyautogui.rightClick(point.x, point.y)
+                past_tense = "Right-clicked"
+
+            time.sleep(1.0)  # Allow dropdown menus / overlays time to animate & open
+            return self._describe_pointer_action(past_tense, action, point)
+
         if kind == "type":
             text = str(action.get("text", ""))
             pyautogui.write(text, interval=0.01)
             return f"Typed {text!r}"
+
         if kind == "press_key":
             key = str(action.get("key", "")).lower()
             pyautogui.press(key)
             return f"Pressed {key}"
+
         if kind == "wait":
             seconds = float(action.get("seconds", DEFAULT_WAIT_SECONDS))
             time.sleep(max(0.0, seconds))
             return f"Waited {seconds:g} seconds"
+
         if kind == "scroll":
             amount = int(action.get("amount", -5))
             pyautogui.scroll(amount)
             return f"Scrolled {amount}"
+
         if kind == "hotkey":
             keys = [str(key).lower() for key in action.get("keys", [])]
             if not keys:
                 raise ActionExecutionError("hotkey requires a non-empty keys list.")
             pyautogui.hotkey(*keys)
             return f"Pressed hotkey {'+'.join(keys)}"
+
         if kind == "open_url":
             url = str(action.get("url", "")).strip()
             if not url:
                 raise ActionExecutionError("open_url requires a url field.")
             webbrowser.open(url)
+            time.sleep(2.0)  # Allow page time to load in browser
             return f"Opened URL {url}"
 
         raise ActionExecutionError(f"Unsupported action: {kind}")
 
     def _resolve_point(self, action: dict[str, Any], screenshot_path: Path | None) -> Point:
-        """Resolve a target name first, then fall back to model coordinates."""
+        """Resolve target using text locator first (for text labels), falling back to visual coordinates."""
 
         target = str(action.get("target", "")).strip()
+
+        # 1. If text target (not an icon label), try locator first
+        if target and not _is_icon_target(target):
+            point = self._locator.find_target(target, screenshot_path)
+            if point:
+                return point
+
+        # 2. Fall back to VLM visual coordinates (x, y)
+        if "x" in action and "y" in action:
+            return Point(int(action["x"]), int(action["y"]))
+
+        # 3. Last resort attempt for any text target if x,y wasn't passed
         if target:
             point = self._locator.find_target(target, screenshot_path)
             if point:
                 return point
 
-        if "x" in action and "y" in action:
-            return Point(int(action["x"]), int(action["y"]))
-
         raise ActionExecutionError(
-            "Click action did not include coordinates, and target lookup could not locate it."
+            f"Click action for {target!r} could not be resolved (no valid coordinates or text match found)."
         )
 
     @staticmethod

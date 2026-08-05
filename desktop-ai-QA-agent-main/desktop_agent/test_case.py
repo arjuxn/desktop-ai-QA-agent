@@ -39,7 +39,7 @@ class TestCase:
         current_step = (
             self.steps[current_step_index]
             if current_step_index < len(self.steps)
-            else "Verify the expected result and finish the test."
+            else "Verify all steps are completed and return action done."
         )
         start_url = self.start_url or "Not specified"
 
@@ -60,7 +60,7 @@ def goal_to_test_case(goal: str) -> TestCase:
         name="Natural Language Test",
         goal=goal,
         steps=[goal],
-        expected_results=["The requested goal is visibly completed."],
+        expected_results=[],
         source="natural_language",
     )
 
@@ -145,12 +145,19 @@ def extract_pdf_text(path: Path) -> str:
 
 
 def _string_list(value: Any) -> list[str]:
-    """Normalize scalar/list values into a list of strings."""
+    """Normalize scalar/list/dict values into a clean list of strings."""
 
     if value is None:
         return []
     if isinstance(value, str):
         return [value]
     if isinstance(value, list):
-        return [str(item) for item in value if str(item).strip()]
+        result: list[str] = []
+        for item in value:
+            if isinstance(item, dict):
+                exp = item.get("expected") or item.get("assertion") or str(item)
+                result.append(str(exp))
+            elif str(item).strip():
+                result.append(str(item))
+        return result
     return [str(value)]

@@ -15,20 +15,13 @@ Rules:
 - Never explain your reasoning.
 - Never invent unsupported actions.
 - Choose one action that can be executed immediately.
-- Prefer coordinates when clicking because the executor can click exact screen positions.
+- DO NOT execute open_url if the target website is already open in the browser; proceed directly to the interaction requested in the current step.
+- For text buttons or links (e.g. "Products", "Industries", "Learn", "Support", "About"), set target to the exact visible label. Also provide x and y pixel coordinates of its center.
+- For icon buttons or unlabelled elements (e.g. Search icon, Language selection ('LN'), User Profile icon), inspect the visual glyph in the screenshot and return the exact x and y pixel coordinates of the icon's center.
 - Coordinates must be absolute screen pixels from the top-left corner of the screenshot.
-- If a target is visible, click the center of the target.
-- When clicking a file, row, menu item, or list item, use the center of that exact row.
-- Do not click a neighboring row with a similar position or icon.
 - If the history shows the same click repeated and the goal is not complete, choose a different action or corrected coordinate.
-- If the current screen already satisfies the goal, return {"action":"done"}.
+- If the current screen already satisfies the step goal, return {"action":"done"}.
 - If the UI is loading or the next state is uncertain, return {"action":"wait","seconds":2}.
-- If the goal asks to use a website and no browser page is already open, use open_url.
-- For browser navigation, prefer open_url or hotkey Ctrl+L over clicking tiny address bars.
-- After typing a search query into a browser search box, use press_key enter unless the results are already visible.
-- For QA verification, use assert_visible or assert_not_visible when checking expected results.
-- Use OCR text as supporting evidence, but trust the screenshot if OCR is incomplete.
-- Use the action history to avoid repeating failed or pointless actions.
 
 Supported actions and fields:
 - {"action":"click","x":123,"y":456,"target":"optional visible label"}
