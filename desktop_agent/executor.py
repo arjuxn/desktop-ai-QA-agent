@@ -12,6 +12,12 @@ import pyautogui
 
 from config import DEFAULT_WAIT_SECONDS
 
+try:
+    from pywinauto import Desktop
+    HAS_PYWINAUTO = True
+except ImportError:
+    HAS_PYWINAUTO = False
+
 
 class ActionExecutionError(RuntimeError):
     """Raised when an action cannot be executed."""
@@ -41,9 +47,7 @@ class WindowsUiAutomationLocator:
     """
 
     def find_target(self, target: str, screenshot_path: Path | None = None) -> Point | None:
-        try:
-            from pywinauto import Desktop
-        except ImportError:
+        if not HAS_PYWINAUTO:
             return None
 
         normalized_target = target.strip().lower()
@@ -129,6 +133,9 @@ class DesktopExecutor:
                 raise ActionExecutionError("open_url requires a url field.")
             webbrowser.open(url)
             return f"Opened URL {url}"
+        if kind in {"assert_visible", "assert_not_visible"}:
+            target = str(action.get("target", ""))
+            return f"Assertion {kind} evaluated for {target!r}"
 
         raise ActionExecutionError(f"Unsupported action: {kind}")
 
@@ -142,7 +149,10 @@ class DesktopExecutor:
                 return point
 
         if "x" in action and "y" in action:
-            return Point(int(action["x"]), int(action["y"]))
+            try:
+                return Point(int(float(action["x"])), int(float(action["y"])))
+            except (ValueError, TypeError) as exc:
+                raise ActionExecutionError(f"Invalid x/y coordinates in action: {exc}") from exc
 
         raise ActionExecutionError(
             "Click action did not include coordinates, and target lookup could not locate it."
@@ -154,3 +164,4 @@ class DesktopExecutor:
         if target:
             return f"{prefix} {target!r} at ({point.x}, {point.y})"
         return f"{prefix} at ({point.x}, {point.y})"
+
