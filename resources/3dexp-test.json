@@ -1,0 +1,54 @@
+{
+  "id": "3DEXPERIENCE_LAB_BUTTONS_001",
+  "name": "3DEXPERIENCE Lab Website Buttons Functionality Test",
+  "goal": "Verify all main interactive buttons, dropdowns, and navigation elements on the 3DEXPERIENCE Lab page work as expected.",
+  "steps": [
+    "Open https://3dexperiencelab.3ds.com",
+    "Click the 'Products' dropdown button in the top navigation header",
+    "Click the 'Industries' dropdown button in the top navigation header",
+    "Click the 'Learn' dropdown button in the top navigation header",
+    "Click the 'Support' dropdown button in the top navigation header",
+    "Click the 'About' dropdown button in the top navigation header",
+    "Click the Search icon button in the header",
+    "Click the Language selection ('LN') icon button in the header",
+    "Click the User Profile icon button in the header"
+  ],
+  "expected_results": [
+    {
+      "step": "Open https://3dexperiencelab.3ds.com",
+      "expected": "The 3DEXPERIENCE Lab homepage loads successfully without errors."
+    },
+    {
+      "step": "Click the 'Products' dropdown button in the top navigation header",
+      "expected": "The Products dropdown menu opens and displays its available categories."
+    },
+    {
+      "step": "Click the 'Industries' dropdown button in the top navigation header",
+      "expected": "The Industries dropdown menu opens and displays its available categories."
+    },
+    {
+      "step": "Click the 'Learn' dropdown button in the top navigation header",
+      "expected": "The Learn dropdown menu opens and displays its available categories."
+    },
+    {
+      "step": "Click the 'Support' dropdown button in the top navigation header",
+      "expected": "The Support dropdown menu opens and displays its available categories."
+    },
+    {
+      "step": "Click the 'About' dropdown button in the top navigation header",
+      "expected": "The About dropdown menu opens and displays its available categories."
+    },
+    {
+      "step": "Click the Search icon button in the header",
+      "expected": "A search bar or search overlay appears and is ready for user input."
+    },
+    {
+      "step": "Click the Language selection ('LN') icon button in the header",
+      "expected": "The language selection menu opens and displays the available language options."
+    },
+    {
+      "step": "Click the User Profile icon button in the header",
+      "expected": "The user profile menu or login dialog opens."
+    }
+  ]
+}
