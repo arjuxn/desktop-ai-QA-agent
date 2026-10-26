@@ -1,1 +1,0 @@
-AI-powered autonomous UI/E2E testing agent that validates applications through real user interactions.
